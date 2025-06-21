@@ -2,22 +2,23 @@ import colorsys
 import math
 import random
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.colors as pc
-from developer_dashboard import dashboard_developer
-from sklearn.linear_model import LinearRegression
-import google.generativeai as genai
-import pandasai as pai
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from sklearn.cluster import KMeans
-import numpy as np
 
 # ------------------------------
 # Page Configuration
 # ------------------------------
 st.set_page_config(page_title="Realestate Dashboard", layout="wide")
+
+import pandas as pd
+import plotly.express as px
+import plotly.colors as pc
+from consume_analysis import cla
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from sklearn.cluster import KMeans
+import numpy as np
+from chat import chat
+from bla_analysis import bla
 
 # ------------------------------
 # Navbar HTML
@@ -80,7 +81,7 @@ st.markdown(navbar_html, unsafe_allow_html=True)
 # ------------------------------
 # Sidebar Navigation
 # ------------------------------
-page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis"])
+page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis"])
 
 # ------------------------------
 # Load Data Once (cached)
@@ -93,29 +94,20 @@ def load_data():
 
 df = load_data()
 
-pai.api_key.set("PAI-0edc3ac9-14f7-4da1-b37a-0d02468d10e0")
 
-# import os
-# os.environ["GEMINI_API_KEY"] = "AIzaSyB8YE6UDTnljAx145_hkq6SqAfixsIjdzY"
 
-# llm = LiteLLM(model="gemini/gemini-2.5-flash-preview-04-17")
+    
+if page == "Consumer Led Analysis":
+    cla()
 
-# # Set your OpenAI API key
-# pai.config.set({"llm": llm})
-
-# ------------------------------
-# Developer Analysis Page
-# ------------------------------
-if page == "Brand Led Analysis":
-    dashboard_developer()
+elif page == "Brand Led Analysis":
+    # dashboard_developer()
+    bla()
 
 # ------------------------------
 # Search Trends Page
 # ------------------------------
 elif page == "Search Trends":
-    genai.configure(api_key="AIzaSyB8YE6UDTnljAx145_hkq6SqAfixsIjdzY")  # Replace with secure access
-
-    gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
 
     if df.empty:
@@ -382,34 +374,7 @@ elif page == "Search Trends":
 
     
     with tab3:
-        chat_container = st.container()
-        messages = chat_container.container(border=True)
-
-        # Input bar at the bottom
-        user_input = st.chat_input(placeholder="e.g., What are the most searched real estate themes in 2024?")
-
-        if user_input:
-            # Display user message
-            messages.chat_message("human").write("You:")
-            messages.write(user_input)
-
-            # Simulate AI response
-            with st.spinner("💡 SixthAI is thinking..."):
-                try:
-                    df_clean = df.copy()
-                    df_clean = df_clean.rename(columns={"keyword": "sub_theme"})
-                    df_clean["theme"] = df_clean["theme"].astype(str).str.strip().str.lower()
-                    df_clean["sub_theme"] = df_clean["sub_theme"].astype(str).str.strip().str.lower()
-                    df_clean["country"] = df_clean["country"].astype(str).str.strip().str.lower()
-                    df_pai = pai.DataFrame(df_clean)
-                    result = df_pai.chat(user_input)
-
-                    # Show AI message
-                    messages.chat_message("ai").write("SixthAI:")
-                    messages.write(result)
-
-                except Exception as e:
-                    messages.chat_message("ai").markdown(f"❌ **Error:** SixthAI encountered an error:\n```{e}```")
+        chat("trends")
         
 
         with st.expander("Suggested Questions"):
