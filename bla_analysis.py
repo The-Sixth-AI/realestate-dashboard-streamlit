@@ -131,7 +131,7 @@ def bla():
         <div class="metric-value">{get_total_estimated_reach(filtered_df)}</div></div>""", unsafe_allow_html=True)
 
     # 📊 Tabs
-    overall_tab, theme_tab, sub_theme_tab, sixthai_tab = st.tabs(["Overall", "Theme", "Sub Theme", "SixthAI"])
+    overall_tab, theme_tab, sub_theme_tab, sixthai_tab = st.tabs(["Overall", "Theme", "Sub Theme", "Ask SixthAI"])
 
     with overall_tab:
         col1, col2 = st.columns(2)
@@ -263,4 +263,4 @@ def bla():
             st.plotly_chart(fig, use_container_width=True)
 
     with sixthai_tab:
-        chat("cla")
+        chat("instagram")

@@ -16,6 +16,8 @@ def check_data_type(data_type):
         return None
 
 def chat(data_type):
+
+    print(f"Data type: {data_type}")
     chat_container = st.container()
     messages = chat_container.container(border=True)
 
@@ -53,7 +55,7 @@ def chat(data_type):
                 if image_data:
 
                     messages.chat_message("ai").write("SixthAI:")
-                    messages.image(image_data, caption="Generated Image", use_column_width=True)
+                    messages.image(image_data, caption="Generated Image")
 
 
                     img_base64 = image_data.split(",")[1]

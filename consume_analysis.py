@@ -137,7 +137,7 @@ def cla():
 
     # ───────────────────────────────────────────────
     # 📊 Tabs
-    overall_tab, theme_tab, sub_theme_tab, sixthai_tab = st.tabs(["Overall", "Theme", "Sub Theme", "SixthAI"])
+    overall_tab, theme_tab, sub_theme_tab, sixthai_tab = st.tabs(["Overall", "Theme", "Sub Theme", "Ask SixthAI"])
 
     with overall_tab:
         col1, col2 = st.columns(2)

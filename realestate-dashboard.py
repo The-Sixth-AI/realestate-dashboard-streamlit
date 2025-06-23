@@ -11,8 +11,11 @@ st.set_page_config(page_title="Realestate Dashboard", layout="wide")
 import pandas as pd
 import plotly.express as px
 import plotly.colors as pc
+from developer_dashboard import dashboard_developer
 from consume_analysis import cla
 from sklearn.linear_model import LinearRegression
+import google.generativeai as genai
+import pandasai as pai
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from sklearn.cluster import KMeans
@@ -94,20 +97,30 @@ def load_data():
 
 df = load_data()
 
+pai.api_key.set("PAI-0edc3ac9-14f7-4da1-b37a-0d02468d10e0")
 
+# import os
+# os.environ["GEMINI_API_KEY"] = "AIzaSyB8YE6UDTnljAx145_hkq6SqAfixsIjdzY"
+
+# llm = LiteLLM(model="gemini/gemini-2.5-flash-preview-04-17")
+
+# # Set your OpenAI API key
+# pai.config.set({"llm": llm})
 
     
 if page == "Consumer Led Analysis":
     cla()
 
 elif page == "Brand Led Analysis":
-    # dashboard_developer()
     bla()
 
 # ------------------------------
 # Search Trends Page
 # ------------------------------
 elif page == "Search Trends":
+    genai.configure(api_key="AIzaSyB8YE6UDTnljAx145_hkq6SqAfixsIjdzY")  # Replace with secure access
+
+    gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
 
     if df.empty:
@@ -224,7 +237,7 @@ elif page == "Search Trends":
 
 
 
-    tab1, tab2, tab3 = st.tabs(["Theme", "Sub Theme", "SixthAI"])
+    tab1, tab2, tab3 = st.tabs(["Theme", "Sub Theme", "Ask SixthAI"])
 
     # ------------------------------
     # THEME ANALYSIS
