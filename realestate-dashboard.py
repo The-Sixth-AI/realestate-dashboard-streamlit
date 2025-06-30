@@ -19,6 +19,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 from chat import chat
 from bla_analysis import bla
+from trajectory_analysis import trajectory_analysis
 
 # ------------------------------
 # Navbar HTML
@@ -81,7 +82,7 @@ st.markdown(navbar_html, unsafe_allow_html=True)
 # ------------------------------
 # Sidebar Navigation
 # ------------------------------
-page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis"])
+page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis", "Trend Trajectory"])
 
 # ------------------------------
 # Load Data Once (cached)
@@ -103,8 +104,10 @@ df = load_data()
 # # Set your OpenAI API key
 # pai.config.set({"llm": llm})
 
-    
-if page == "Consumer Led Analysis":
+if page == "Trend Trajectory":
+    trajectory_analysis()
+
+elif page == "Consumer Led Analysis":
     cla()
 
 elif page == "Brand Led Analysis":
@@ -120,20 +123,69 @@ elif page == "Search Trends":
         st.warning("No data available.")
         st.stop()
 
+    # Prepare options
     themes = sorted(df["theme"].dropna().unique().tolist())
+    subthemes = sorted(df["keyword"].dropna().unique().tolist())
     countries = sorted(df["country"].dropna().unique().tolist())
 
+    min_date, max_date = df["date"].min(), df["date"].max()
+
+    # -----------------------------
+    # Initialize session state (only if not set)
+    # -----------------------------
+    if "theme" not in st.session_state:
+        st.session_state["theme"] = "All"
+    if "country" not in st.session_state:
+        st.session_state["country"] = "All"
+    if "subtheme" not in st.session_state:
+        st.session_state["subtheme"] = "All"
+    if "date_range" not in st.session_state:
+        st.session_state["date_range"] = (min_date, max_date)
+
+    
+    # -----------------------------
+    # Filter widgets (no value=, just key=)
+    # -----------------------------
     col1, col2 = st.columns(2)
     with col1:
-        selected_theme = st.selectbox("🎨 Select Theme", ["All"] + themes)
+        st.selectbox("🎨 Select Theme", ["All"] + themes, key="theme")
     with col2:
-        selected_country = st.selectbox("🌍 Select Country", ["All"] + countries)
+        st.selectbox("🌍 Select Country", ["All"] + countries, key="country")
 
+    col3, col4 = st.columns(2)
+    with col3:
+        st.selectbox("🧩 Select Sub Theme", ["All"] + subthemes, key="subtheme")
+    with col4:
+        st.date_input("📅 Select Date Range", key="date_range")
+    
+
+    # -----------------------------
+    # Reset button
+    # -----------------------------
+    if st.button("🔄 Reset Filters"):
+        st.session_state["theme"] = "All"
+        st.session_state["country"] = "All"
+        st.session_state["subtheme"] = "All"
+        st.session_state["date_range"] = (min_date, max_date)
+        st.experimental_rerun()
+
+
+    # -----------------------------
+    # Apply filters
+    # -----------------------------
     filtered_df = df.copy()
-    if selected_theme != "All":
-        filtered_df = filtered_df[filtered_df["theme"] == selected_theme]
-    if selected_country != "All":
-        filtered_df = filtered_df[filtered_df["country"] == selected_country]
+
+    if st.session_state["theme"] != "All":
+        filtered_df = filtered_df[filtered_df["theme"] == st.session_state["theme"]]
+    if st.session_state["country"] != "All":
+        filtered_df = filtered_df[filtered_df["country"] == st.session_state["country"]]
+    if st.session_state["subtheme"] != "All":
+        filtered_df = filtered_df[filtered_df["keyword"] == st.session_state["subtheme"]]
+
+    # Ensure it's a date range
+    if isinstance(st.session_state["date_range"], tuple) and len(st.session_state["date_range"]) == 2:
+        start_date, end_date = pd.to_datetime(st.session_state["date_range"][0]), pd.to_datetime(st.session_state["date_range"][1])
+        filtered_df = filtered_df[(filtered_df["date"] >= start_date) & (filtered_df["date"] <= end_date)]
 
     if filtered_df.empty:
         st.warning("No data available for the selected filters.")

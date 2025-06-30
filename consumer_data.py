@@ -51,6 +51,9 @@ def get_post_trends_over_time(df):
     # Drop rows with invalid dates
     df = df.dropna(subset=['post_upload_date'])
 
+    # ✅ Filter data from 2021 onwards
+    df = df[df['post_upload_date'] >= pd.Timestamp('2021-01-01')]
+
     # Group by date
     post_trend = (
         df.groupby(df['post_upload_date'].dt.date)
@@ -86,6 +89,9 @@ def get_engagement_trends_over_time(df):
     # Ensure date format
     df['post_upload_date'] = pd.to_datetime(df['post_upload_date'], errors='coerce')
     df = df.dropna(subset=['post_upload_date'])
+
+    # ✅ Filter data from 2021 onwards
+    df = df[df['post_upload_date'] >= pd.Timestamp('2021-01-01')]
 
     # Fill NaNs in engagement fields
     df['post_likes'] = df['post_likes'].fillna(0)

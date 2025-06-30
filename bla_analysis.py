@@ -263,4 +263,4 @@ def bla():
             st.plotly_chart(fig, use_container_width=True)
 
     with sixthai_tab:
-        chat("instagram")
+        chat("brand led analysis")
