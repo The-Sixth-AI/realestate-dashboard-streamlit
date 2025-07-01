@@ -19,7 +19,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 from chat import chat
 from bla_analysis import bla
-from trajectory_analysis import trajectory_analysis
+# from trajectory_analysis import trajectory_analysis
 
 # ------------------------------
 # Navbar HTML
@@ -82,7 +82,7 @@ st.markdown(navbar_html, unsafe_allow_html=True)
 # ------------------------------
 # Sidebar Navigation
 # ------------------------------
-page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis", "Trend Trajectory"])
+page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis"])
 
 # ------------------------------
 # Load Data Once (cached)
@@ -104,10 +104,10 @@ df = load_data()
 # # Set your OpenAI API key
 # pai.config.set({"llm": llm})
 
-if page == "Trend Trajectory":
-    trajectory_analysis()
+# if page == "Trend Trajectory":
+#     trajectory_analysis()
 
-elif page == "Consumer Led Analysis":
+if page == "Consumer Led Analysis":
     cla()
 
 elif page == "Brand Led Analysis":
