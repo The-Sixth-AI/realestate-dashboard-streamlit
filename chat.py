@@ -9,16 +9,33 @@ FASTAPI_URL = "http://152.70.74.85:5001/chat"
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+def check_data_type(data_type):
+    if data_type == "Brand Led Analysis":
+        return "brand led analysis"
+    elif data_type == "Search Trends":
+        return "trends"
+    elif data_type == "Consumer Led Analysis":
+        return "cla"
+    else:
+        return None
 
 def chat(data_type):
     print(f"Data type: {data_type}")
-    
+
+    key = f"chat_history_{data_type}"
+
+    if key not in st.session_state:
+        st.session_state[key] = []
+
+    # if "chat_history" not in st.session_state:
+    #     st.session_state.chat_history = []
+
     # Main chat interface
     chat_container = st.container()
 
     # Display chat history
     with chat_container:
-        for i, chat in enumerate(st.session_state.chat_history):
+        for i, chat in enumerate(st.session_state[key]):
             # User message
             with st.chat_message("user"):
                 st.write(f"**Data Source:** {chat['data_type']}")
@@ -146,7 +163,7 @@ def chat(data_type):
                         "pdf_path": pdf_path
                     })
                     
-                    st.session_state.chat_history.append(user_chat)
+                    st.session_state[key].append(user_chat)
                     
                 except Exception as e:
                     error_message = f"Error: {e}"
@@ -159,7 +176,7 @@ def chat(data_type):
                         "pdf_path": None
                     })
                     
-                    st.session_state.chat_history.append(user_chat)
+                    st.session_state[key].append(user_chat)
 
     # Custom styling for better appearance
     st.markdown("""
