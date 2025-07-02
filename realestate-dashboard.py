@@ -8,6 +8,7 @@ import streamlit as st
 # ------------------------------
 st.set_page_config(page_title="Realestate Dashboard", layout="wide")
 
+
 import pandas as pd
 import plotly.express as px
 import plotly.colors as pc
@@ -19,7 +20,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 from chat import chat
 from bla_analysis import bla
-# from trajectory_analysis import trajectory_analysis
+from trajectory_analysis import trajectory_analysis
 
 # ------------------------------
 # Navbar HTML
@@ -79,10 +80,14 @@ navbar_html = """
 """
 st.markdown(navbar_html, unsafe_allow_html=True)
 
+
 # ------------------------------
 # Sidebar Navigation
 # ------------------------------
-page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis"])
+with st.sidebar:
+    page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis", "Trend Trajectory"])
+
+
 
 # ------------------------------
 # Load Data Once (cached)
@@ -96,18 +101,11 @@ def load_data():
 df = load_data()
 
 
-# import os
-# os.environ["GEMINI_API_KEY"] = "AIzaSyB8YE6UDTnljAx145_hkq6SqAfixsIjdzY"
 
-# llm = LiteLLM(model="gemini/gemini-2.5-flash-preview-04-17")
+if page == "Trend Trajectory":
+    trajectory_analysis()
 
-# # Set your OpenAI API key
-# pai.config.set({"llm": llm})
-
-# if page == "Trend Trajectory":
-#     trajectory_analysis()
-
-if page == "Consumer Led Analysis":
+elif page == "Consumer Led Analysis":
     cla()
 
 elif page == "Brand Led Analysis":
