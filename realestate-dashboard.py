@@ -85,7 +85,7 @@ st.markdown(navbar_html, unsafe_allow_html=True)
 # Sidebar Navigation
 # ------------------------------
 with st.sidebar:
-    page = st.sidebar.radio("📊 Select Dashboard", ["Search Trends", "Brand Led Analysis", "Consumer Led Analysis", "Trend Trajectory"])
+    page = st.sidebar.radio("📊 Select Dashboard", ["Trend Trajectory", "Search Trends", "Brand Led Analysis", "Consumer Led Analysis"])
 
 
 

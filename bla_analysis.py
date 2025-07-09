@@ -137,9 +137,9 @@ def bla():
         col1, col2 = st.columns(2)
 
         with col1:
-            yearly_post_df = get_yearly_post_trend(filtered_df)
-            fig = px.bar(yearly_post_df, x='year', y='post_count', title='📅 Yearly Post Volume (Last 5 Years)',
-                         text='post_count', labels={'year': 'Year', 'post_count': 'Volume'})
+            yearly_post_df = get_yearly_post_trend(filtered_df, start_year=2021)
+            fig = px.bar(yearly_post_df, x='year', y='post_count', title='📅 Yearly Post Volume (From 2021)',
+                        text='post_count', labels={'year': 'Year', 'post_count': 'Volume'})
             fig.update_layout(template="plotly_white", xaxis=dict(type='category'))
             fig.update_traces(textposition='outside', width=0.4)
             st.plotly_chart(fig, use_container_width=True)

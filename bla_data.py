@@ -70,6 +70,10 @@ def get_average_post_engagement(df):
 def get_post_trends_over_time(df):
     df['post_upload_date'] = pd.to_datetime(df['post_upload_date'], errors='coerce')
     df = df.dropna(subset=['post_upload_date'])
+
+    # Filter only posts from start_year onwards
+    df = df[df['post_upload_date'].dt.year >= 2021]
+
     post_trend = (
         df.groupby(df['post_upload_date'].dt.date)
         .size()
@@ -79,30 +83,34 @@ def get_post_trends_over_time(df):
     return post_trend
 
 
-def get_yearly_post_trend(df, last_n_years=5):
+def get_yearly_post_trend(df, start_year=2021):
     df['post_upload_date'] = pd.to_datetime(df['post_upload_date'], errors='coerce')
     df = df.dropna(subset=['post_upload_date'])
     df['year'] = df['post_upload_date'].dt.year
-    current_year = datetime.now().year
-    recent_years = list(range(current_year - last_n_years + 1, current_year + 1))
-    df = df[df['year'].isin(recent_years)]
+    df = df[df['year'] >= start_year]
     yearly_post_counts = df.groupby('year').size().reset_index(name='post_count')
     return yearly_post_counts
-
 
 def get_engagement_trends_over_time(df):
     df['post_upload_date'] = pd.to_datetime(df['post_upload_date'], errors='coerce')
     df = df.dropna(subset=['post_upload_date'])
+
+    # Filter from specified start year
+    df = df[df['post_upload_date'].dt.year >= 2021]
+
     df['post_likes'] = df['post_likes'].fillna(0)
     df['post_video_view_count'] = df['post_video_view_count'].fillna(0)
     df['post_comments'] = df['post_comments'].fillna(0)
+    
     df['engagement'] = df['post_likes'] + df['post_video_view_count'] + df['post_comments']
+
     engagement_trend = (
         df.groupby(df['post_upload_date'].dt.date)['engagement']
         .sum()
         .reset_index()
         .rename(columns={'post_upload_date': 'date'})
     )
+
     return engagement_trend
 
 
