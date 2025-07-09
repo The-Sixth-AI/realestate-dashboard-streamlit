@@ -10,9 +10,9 @@ def trajectory_analysis():
     # -----------------------------
     # Load and Normalize Data
     # -----------------------------
-    dev = pl.read_parquet("realestate_developers.parquet")
-    trend = pl.read_parquet("realestate_google_trends.parquet")
-    cla = pl.read_parquet("cla-realestate.parquet")
+    dev = pl.read_parquet("realestate_developers-min.parquet")
+    trend = pl.read_parquet("realestate_google_trends-min.parquet")
+    cla = pl.read_parquet("cla-realestate-min.parquet")
 
     # Convert to datetime (handle both string and datetime inputs)
     def ensure_datetime(df, col_name):
