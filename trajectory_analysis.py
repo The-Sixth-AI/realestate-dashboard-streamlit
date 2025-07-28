@@ -15,7 +15,6 @@ def trajectory_analysis():
     trend = pl.read_parquet("realestate_google_trends-min.parquet")
     cla = pl.read_parquet("cla-realestate-min.parquet")
 
-    # Convert to datetime
     def ensure_datetime(df, col_name):
         if df.schema[col_name] in [pl.Datetime, pl.Datetime('ms'), pl.Datetime('us'), pl.Datetime('ns')]:
             return df.with_columns(pl.col(col_name).cast(pl.Datetime('ns')))
@@ -26,13 +25,12 @@ def trajectory_analysis():
     trend = ensure_datetime(trend, 'date')
     cla = ensure_datetime(cla, 'post_upload_date')
 
-    # Add sub_theme column
     dev = dev.with_columns(pl.col('matched_keyword').alias('sub_theme'))
     cla = cla.with_columns(pl.col('matched_keyword').alias('sub_theme'))
     trend = trend.with_columns(pl.col('keyword').alias('sub_theme'))
 
     # -----------------------------
-    # Country Normalization
+    # Normalize country names
     # -----------------------------
     COUNTRY_MAPPING = {
         "uae": "United Arab Emirates",
@@ -56,7 +54,7 @@ def trajectory_analysis():
     cla = normalize_country(cla)
 
     # -----------------------------
-    # Dropdown Setup
+    # Dropdowns
     # -----------------------------
     combined_countries = (
         pl.concat([dev.select('country'), trend.select('country'), cla.select('country')])
@@ -102,25 +100,21 @@ def trajectory_analysis():
             trend_temp = trend_temp.filter(pl.col('country') == country)
             cla_temp = cla_temp.filter(pl.col('country') == country)
 
-        # Prepare developer data
-        dev_temp = dev_temp.with_columns([
-            pl.col('theme').alias('theme'),
-            pl.col('matched_keyword').alias('sub_theme')
-        ])
-
-        # Prepare trend data
         trend_temp = trend_temp.with_columns([
             pl.col('theme').alias('theme'),
             pl.col('keyword').alias('sub_theme')
         ])
 
-        # Prepare CLA data
+        dev_temp = dev_temp.with_columns([
+            pl.col('theme').alias('theme'),
+            pl.col('matched_keyword').alias('sub_theme')
+        ])
+
         cla_temp = cla_temp.with_columns([
             pl.col('matched_theme').alias('theme'),
             pl.col('matched_keyword').alias('sub_theme')
         ])
 
-        # Google Trends aggregation
         trend_agg = (
             trend_temp
             .group_by(group_keys + ['date'])
@@ -130,7 +124,7 @@ def trajectory_analysis():
                 pl.col('raw_volume').max().over(group_keys).alias('max_val')
             ])
             .with_columns([
-                (100 * (pl.col('raw_volume') - pl.col('min_val')) / 
+                (100 * (pl.col('raw_volume') - pl.col('min_val')) /
                  (pl.col('max_val') - pl.col('min_val') + 1e-6)).alias('volume'),
                 pl.lit('google').alias('source'),
                 pl.col('date').cast(pl.Datetime('ns')).alias('date')
@@ -138,7 +132,6 @@ def trajectory_analysis():
             .select(group_keys + ['date', 'volume', 'source'])
         )
 
-        # Developer Posts aggregation
         dev_agg = (
             dev_temp
             .with_columns(pl.col('post_upload_date').dt.truncate('1mo').alias('date'))
@@ -149,14 +142,13 @@ def trajectory_analysis():
                 pl.col('count').max().over(group_keys).alias('max_count')
             ])
             .with_columns([
-                (100 * (pl.col('count') - pl.col('min_count')) / 
+                (100 * (pl.col('count') - pl.col('min_count')) /
                  (pl.col('max_count') - pl.col('min_count') + 1e-6)).alias('volume'),
                 pl.lit('developer').alias('source')
             ])
             .select(group_keys + ['date', 'volume', 'source'])
         )
 
-        # CLA Posts aggregation
         cla_agg = (
             cla_temp
             .with_columns(pl.col('post_upload_date').dt.truncate('1mo').alias('date'))
@@ -167,7 +159,7 @@ def trajectory_analysis():
                 pl.col('count').max().over(group_keys).alias('max_count')
             ])
             .with_columns([
-                (100 * (pl.col('count') - pl.col('min_count')) / 
+                (100 * (pl.col('count') - pl.col('min_count')) /
                  (pl.col('max_count') - pl.col('min_count') + 1e-6)).alias('volume'),
                 pl.lit('ugc').alias('source')
             ])
@@ -204,7 +196,7 @@ def trajectory_analysis():
                 entry[group_keys[1]] = keys[1]
             stats.append(entry)
         if not stats:
-            return pl.DataFrame(schema={**{key: pl.Utf8 for key in group_keys}, 'volume': pl.Float64, 'growth': pl.Float64, 'category': pl.Utf8})
+            return pl.DataFrame()
         df = pl.DataFrame(stats)
         v_median = df.select(pl.col('volume').median()).item()
         g_median = df.select(pl.col('growth').median()).item()
@@ -220,12 +212,76 @@ def trajectory_analysis():
         ])
         return df
 
-    def plot_time_series(avg_volume, top_df, group_keys, category):
+    def plot_time_series(avg_volume, top_df, group_keys, category, freq_option='1M'):
         key = group_keys[1] if len(group_keys) > 1 else group_keys[0]
         selected = top_df.filter(pl.col('category') == category).select(key).to_pandas()[key].tolist()
         data = avg_volume.filter(pl.col(key).is_in(selected)).sort(['date', key]).to_pandas()
+
+        if data.empty:
+            return px.line(title=f"No data for {category}")
+
         data['date'] = pd.to_datetime(data['date'])
-        fig = px.line(data, x='date', y='volume', color=key, title=f"{category} - Top 3")
+        data.set_index('date', inplace=True)
+        
+        # Resample data based on frequency
+        data_resampled = data.groupby([key]).resample(freq_option).mean(numeric_only=True).reset_index()
+        
+        # Remove any NaN values that might result from resampling
+        data_resampled = data_resampled.dropna(subset=['volume'])
+        
+        if data_resampled.empty:
+            return px.line(title=f"No data for {category} after resampling")
+
+        # Create the plot
+        fig = px.line(data_resampled, x='date', y='volume', color=key, title=f"{category} - Top 3 ({freq_option})")
+        
+        # Set x-axis tick frequency based on the selected frequency
+        if freq_option == '1M':
+            dtick = "M1"  # Monthly ticks
+            tickformat = "%b %Y"  # Jan 2023
+        elif freq_option == '3M':
+            dtick = "M3"  # Quarterly ticks
+            tickformat = "%b %Y"  # Jan 2023, Apr 2023, etc.
+        elif freq_option == '6M':
+            dtick = "M6"  # Semi-annual ticks
+            tickformat = "%b %Y"  # Jan 2023, Jul 2023, etc.
+        elif freq_option == '1Y':
+            dtick = "M12"  # Annual ticks
+            tickformat = "%Y"  # 2023, 2024, etc.
+        else:
+            dtick = "M1"  # Default to monthly
+            tickformat = "%b %Y"
+        
+        # Get the actual data ranges from resampled data
+        y_min = data_resampled['volume'].min()
+        y_max = data_resampled['volume'].max()
+        x_min = data_resampled['date'].min()
+        x_max = data_resampled['date'].max()
+        
+        # Add padding
+        y_padding = (y_max - y_min) * 0.1 if y_max > y_min else 1
+        
+        # Update x-axis with proper tick frequency
+        fig.update_xaxes(
+            title="Date",
+            range=[x_min, x_max],
+            dtick=dtick,  # This sets the tick frequency
+            tickformat=tickformat,  # This sets the tick label format
+            autorange=False
+        )
+        
+        # Update y-axis
+        fig.update_yaxes(
+            title="Normalized Volume",
+            range=[y_min - y_padding, y_max + y_padding],
+            autorange=False
+        )
+        
+        fig.update_layout(
+            margin=dict(l=40, r=40, t=40, b=40),
+            showlegend=True
+        )
+        
         return fig
 
     def plot_bar(stats_df, group_keys, use_top5=False):
@@ -245,51 +301,6 @@ def trajectory_analysis():
             fig = px.bar(data_pd, x=key, y='normalized_volume', color=key,
                          title=f"{category} - Normalized Volume", text='normalized_volume')
             st.plotly_chart(fig, use_container_width=True)
-
-    # -----------------------------
-    # NEW: Theme-by-Country with log scaling
-    # -----------------------------
-    def theme_country_scores(selected_theme: str) -> pl.DataFrame:
-        theme_norm = selected_theme.strip().lower()
-        rows = []
-        for c in combined_countries:
-            ts, _ = prepare_data(use_sub_theme=False, country=c)
-            if ts.height == 0:
-                continue
-            ts_country = ts.with_columns(pl.col('theme').str.to_lowercase())
-            tsel = ts_country.filter(pl.col('theme') == theme_norm)
-            if tsel.height == 0:
-                continue
-            avg_val = tsel.select(pl.col('volume').mean()).item()
-            rows.append({"country": c, "avg_volume": avg_val})
-        if not rows:
-            return pl.DataFrame({"country": [], "avg_volume": [], "normalized_volume": []})
-        df = pl.DataFrame(rows)
-        max_v = df.select(pl.col('avg_volume').max()).item()
-        # ✅ Use Polars native log1p for performance
-        df = df.with_columns([
-            (100 * (pl.col('avg_volume').log1p() / math.log1p(max_v))).alias('normalized_volume')
-        ])
-        return df
-
-    def plot_theme_by_country_bar(theme_selected: str):
-        df = theme_country_scores(theme_selected)
-        if df.height == 0:
-            st.info(f"No data available across countries for theme: {theme_selected}.")
-            return
-        df_pd = df.sort('normalized_volume', descending=True).to_pandas()
-        fig = px.bar(
-            df_pd,
-            x='country',
-            y='normalized_volume',
-            color='country',
-            title=f"{theme_selected}: Average Score by Country",
-            text='normalized_volume',
-            color_discrete_sequence=px.colors.qualitative.Set2
-        )
-        fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
-        fig.update_layout(yaxis=dict(range=[0, 100]), showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
 
     def show_tab(title, use_sub_theme=False, country=None):
         avg_volume, group_keys = prepare_data(use_sub_theme=use_sub_theme, country=country)
@@ -311,10 +322,19 @@ def trajectory_analysis():
         st.markdown(f"### {title} Summary")
         display_cols = ['theme'] + (['sub_theme'] if use_sub_theme else []) + ['volume', 'growth', 'category']
         st.dataframe(stats_df.select(display_cols).to_pandas(), use_container_width=True)
+
         line_graph, bar_graph = st.tabs(["Line Graphs", "Bar Graphs"])
         with line_graph:
+            freq_option = st.radio(
+                "Select Time Aggregation",
+                options=["1M", "3M", "6M", "1Y"],
+                index=0,
+                horizontal=True,
+                key=f"freq_selector_{title.lower().replace(' ', '_')}"
+            )
             for cat in stats_df.select('category').unique().to_pandas()['category']:
-                st.plotly_chart(plot_time_series(avg_volume, top_df, group_keys, cat), use_container_width=True)
+                st.plotly_chart(plot_time_series(avg_volume, top_df, group_keys, cat, freq_option), use_container_width=True)
+
         with bar_graph:
             plot_bar(stats_df, group_keys, use_top5=use_sub_theme)
 
@@ -328,15 +348,6 @@ def trajectory_analysis():
     theme_tab, sub_theme_tab = st.tabs(["Themes", "Sub-Themes"])
     with theme_tab:
         show_tab("Themes", use_sub_theme=False, country=selected_country_param)
-        st.markdown("### Theme-by-Country Comparison")
-        theme_for_country_bar = st.selectbox(
-            "Select Theme to Compare Across Countries",
-            options=combined_themes,
-            index=0,
-            key="theme_country_select"
-        )
-        plot_theme_by_country_bar(theme_for_country_bar)
 
     with sub_theme_tab:
         show_tab("Sub-Themes", use_sub_theme=True, country=selected_country_param)
-
